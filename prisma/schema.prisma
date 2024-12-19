@@ -1,0 +1,83 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
+  password String
+  role     String   @default("user") // "admin" or "user"
+}
+
+model Sale {
+  id         Int       @id @default(autoincrement())
+  date       DateTime  @default(now())
+  schoolId   Int
+  school     School    @relation(fields: [schoolId], references: [id])
+  uniforms   SaleItem[]
+  total      Float
+  profit     Float
+}
+
+model SaleItem {
+  id        Int      @id @default(autoincrement())
+  saleId    Int
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  uniformId Int
+  uniform   Uniform  @relation(fields: [uniformId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+model Supplier {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  phone       String
+  leadTime    Int      // Days required to restock
+  createdAt   DateTime @default(now())
+  uniforms    Uniform[] // One-to-Many relationship with Uniform
+}
+
+model Uniform {
+  id                 Int      @id @default(autoincrement())
+  name               String
+  size               String
+  price              Float
+  costPrice          Float
+  stock              Int
+  lowStockThreshold  Int      @default(5) // Default low stock threshold
+  schoolId           Int
+  school             School   @relation(fields: [schoolId], references: [id])
+  saleItems          SaleItem[]
+  stockAdjustments  StockAdjustment[]
+  supplierId          Int?      
+  image     Bytes?  // Store image as a BLOB
+  supplier            Supplier? @relation(fields: [supplierId], references: [id])
+  imageUrl            String?   // URL to store uniform image
+}
+
+model StockAdjustment {
+  id          Int      @id @default(autoincrement())
+  uniformId   Int
+  uniform     Uniform  @relation(fields: [uniformId], references: [id])
+  adjustment  Int      // Positive or negative adjustment
+  createdAt   DateTime @default(now())
+  reason      String
+}
+
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String
+  phone     String
+  principal String
+  uniforms  Uniform[]
+  sales     Sale[]
+}
+
