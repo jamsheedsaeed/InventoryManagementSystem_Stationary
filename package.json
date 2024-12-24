@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "debug": "next build --debug",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:ignore-types": "next build && tsc --noEmit"
+
   },
   "dependencies": {
     "@prisma/client": "^6.0.1",

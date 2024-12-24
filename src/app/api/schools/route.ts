@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export async function GET() {
+  console.log("Get called");
   const schools = await prisma.school.findMany();
   return NextResponse.json(schools);
 }

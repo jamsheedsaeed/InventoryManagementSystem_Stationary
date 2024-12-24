@@ -18,7 +18,7 @@ model Sale {
   id         Int       @id @default(autoincrement())
   date       DateTime  @default(now())
   schoolId   Int
-  school     School    @relation(fields: [schoolId], references: [id])
+  school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   uniforms   SaleItem[]
   total      Float
   profit     Float
@@ -45,21 +45,21 @@ model Supplier {
 }
 
 model Uniform {
-  id                 Int      @id @default(autoincrement())
-  name               String
-  size               String
-  price              Float
-  costPrice          Float
-  stock              Int
-  lowStockThreshold  Int      @default(5) // Default low stock threshold
-  schoolId           Int
-  school             School   @relation(fields: [schoolId], references: [id])
-  saleItems          SaleItem[]
+  id                Int      @id @default(autoincrement())
+  name              String
+  size              String
+  price             Float
+  costPrice         Float
+  stock             Int
+  lowStockThreshold Int      @default(5) // Default low stock threshold
+  schoolId          Int
+  school            School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  saleItems         SaleItem[]
   stockAdjustments  StockAdjustment[]
-  supplierId          Int?      
-  image     Bytes?  // Store image as a BLOB
-  supplier            Supplier? @relation(fields: [supplierId], references: [id])
-  imageUrl            String?   // URL to store uniform image
+  supplierId        Int?
+  image             Bytes?   // Store image as a BLOB
+  supplier          Supplier? @relation(fields: [supplierId], references: [id])
+  imageUrl          String?   // URL to store uniform image
 }
 
 model StockAdjustment {
@@ -80,4 +80,3 @@ model School {
   uniforms  Uniform[]
   sales     Sale[]
 }
-

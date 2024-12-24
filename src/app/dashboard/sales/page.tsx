@@ -177,7 +177,7 @@ export default function SalesPage() {
                 )}
                 <h3 className="text-lg font-bold">{uniform.name}</h3>
                 <p className="text-gray-600">Size: {uniform.size}</p>
-                <p className="text-gray-600 mb-4">Price: ${uniform.price}</p>
+                <p className="text-gray-600 mb-4">Price: PKR <span className="font-bold">{uniform.price}</span></p>
                 <button
                   onClick={() => addToCart(uniform)}
                   className="mt-auto bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"

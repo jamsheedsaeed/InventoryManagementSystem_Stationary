@@ -27,6 +27,7 @@ export default function SalesReportPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null); // For delete confirmation
 
   // Fetch sales data
   const fetchSales = async () => {
@@ -43,6 +44,18 @@ export default function SalesReportPage() {
       console.error("Error fetching sales report:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Delete sale
+  const deleteSale = async (id: number) => {
+    try {
+      const res = await fetch(`/api/sales/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete sale");
+      setSelectedSale(null); // Close confirmation popup
+      setSales(sales.filter((sale) => sale.id !== id)); // Update state
+    } catch (error) {
+      console.error("Error deleting sale:", error);
     }
   };
 
@@ -139,6 +152,7 @@ export default function SalesReportPage() {
                   <th className="border px-4 py-2 text-left">Items</th>
                   <th className="border px-4 py-2 text-left">Total ($)</th>
                   <th className="border px-4 py-2 text-left">Profit ($)</th>
+                  <th className="border px-4 py-2 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -155,6 +169,14 @@ export default function SalesReportPage() {
                     </td>
                     <td className="border px-4 py-2">${sale.total.toFixed(2)}</td>
                     <td className="border px-4 py-2">${sale.profit.toFixed(2)}</td>
+                    <td className="border px-4 py-2">
+                      <button
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                        onClick={() => setSelectedSale(sale)}
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -162,6 +184,34 @@ export default function SalesReportPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {selectedSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
+            <h2 className="text-lg font-bold mb-4">Confirm Delete</h2>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete the sale for{" "}
+              <strong>{selectedSale.school.name}</strong>? <br />
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                onClick={() => setSelectedSale(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                onClick={() => deleteSale(selectedSale.id)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

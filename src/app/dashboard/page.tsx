@@ -28,6 +28,8 @@ export default function SchoolsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [activeTab, setActiveTab] = useState<"add" | "list">("add");
+  const [selectedSchool, setSelectedSchool] = useState<School | null>(null); // For delete confirmation popup
+  const [editingSchool, setEditingSchool] = useState<School | null>(null); // For edit form popup
 
   // Fetch schools from the API
   async function fetchSchools() {
@@ -91,6 +93,7 @@ export default function SchoolsPage() {
     try {
       const res = await fetch(`/api/schools/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete school");
+      setSelectedSchool(null); // Close the confirmation popup
       fetchSchools();
     } catch (error) {
       console.error("Error deleting school:", error);
@@ -98,9 +101,28 @@ export default function SchoolsPage() {
     }
   }
 
+  // Update a school
+  async function updateSchool() {
+    if (!editingSchool) return;
+
+    try {
+      const res = await fetch(`/api/schools/${editingSchool.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingSchool),
+      });
+      if (!res.ok) throw new Error("Failed to update school");
+      setEditingSchool(null); // Close the edit form popup
+      fetchSchools();
+    } catch (error) {
+      console.error("Error updating school:", error);
+      setError("Failed to update school. Please try again.");
+    }
+  }
+
   useEffect(() => {
     fetchSchools();
-    fetchLowStockItems();
+    fetchLowStockItems(); // Fetch low stock items
   }, []);
 
   return (
@@ -131,24 +153,24 @@ export default function SchoolsPage() {
         </button>
       </div>
 
+      {/* Low Stock Alerts */}
+      {lowStockItems.length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-md mb-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ Low Stock Alerts</h2>
+          <ul className="space-y-2">
+            {lowStockItems.map((item) => (
+              <li key={item.id} className="text-gray-700">
+                {item.name} (Size: {item.size}) - <strong>Stock: {item.stock}</strong> | School:{" "}
+                <strong>{item.school.name}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Tab Content */}
       {activeTab === "add" && (
         <>
-          {/* Low Stock Alerts */}
-          {lowStockItems.length > 0 && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-md mb-6 shadow-sm">
-              <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ Low Stock Alerts</h2>
-              <ul className="space-y-2">
-                {lowStockItems.map((item) => (
-                  <li key={item.id} className="text-gray-700">
-                    {item.name} (Size: {item.size}) - <strong>Stock: {item.stock}</strong> | School:{" "}
-                    <strong>{item.school.name}</strong>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {/* Add School Form */}
           <div className="bg-white p-6 shadow-md rounded-md">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Add a New School</h2>
@@ -162,19 +184,18 @@ export default function SchoolsPage() {
                     {field}
                   </label>
                   <input
-  type="text"
-  id={field}
-  value={form[field as keyof typeof form]} // Assert as a key of form
-  onChange={(e) =>
-    setForm({
-      ...form,
-      [field as keyof typeof form]: e.target.value,
-    })
-  }
-  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-  placeholder={`Enter ${field}`}
-/>
-
+                    type="text"
+                    id={field}
+                    value={form[field as keyof typeof form]}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        [field as keyof typeof form]: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder={`Enter ${field}`}
+                  />
                 </div>
               ))}
             </div>
@@ -212,17 +233,101 @@ export default function SchoolsPage() {
                   <p className="text-gray-600 mb-4">
                     <strong>Principal:</strong> {school.principal}
                   </p>
-                  <button
-                    onClick={() => deleteSchool(school.id)}
-                    className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex justify-between gap-4">
+                    <button
+                      onClick={() => setEditingSchool(school)}
+                      className="w-full bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600 transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setSelectedSchool(school)}
+                      className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </>
+      )}
+
+      {/* Edit School Popup */}
+      {editingSchool && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+            <h2 className="text-lg font-bold mb-4">Edit School</h2>
+            <div className="grid grid-cols-1 gap-4">
+              {Object.keys(editingSchool).map(
+                (key) =>
+                  key !== "id" && ( // Skip editing the ID
+                    <div key={key}>
+                      <label className="block font-medium capitalize">{key}</label>
+                      <input
+                        type="text"
+                        value={editingSchool[key as keyof School] as string}
+                        onChange={(e) =>
+                          setEditingSchool({
+                            ...editingSchool,
+                            [key]: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+                  )
+              )}
+            </div>
+            <div className="flex justify-end mt-4 gap-4">
+              <button
+                onClick={() => setEditingSchool(null)}
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateSchool}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Popup */}
+      {selectedSchool && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+            <h2 className="text-lg font-bold mb-4">Warning</h2>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete school <strong>{selectedSchool.name}</strong>? <br />
+              <span className="text-red-500 font-bold">
+                All records related to this school will be deleted permanently.
+              </span>
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setSelectedSchool(null)}
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  deleteSchool(selectedSchool.id);
+                  setSelectedSchool(null);
+                }}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
