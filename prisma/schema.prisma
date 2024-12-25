@@ -60,6 +60,7 @@ model Uniform {
   image             Bytes?   // Store image as a BLOB
   supplier          Supplier? @relation(fields: [supplierId], references: [id])
   imageUrl          String?   // URL to store uniform image
+  barcode           String   @unique // Add a unique barcode field
 }
 
 model StockAdjustment {

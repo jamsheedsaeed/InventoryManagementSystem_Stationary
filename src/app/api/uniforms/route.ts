@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
+import { v4 as uuidv4 } from "uuid"; // Library for generating unique identifiers
 
 const prisma = new PrismaClient();
 
@@ -61,6 +62,8 @@ export async function POST(req: Request) {
       imageBuffer = Buffer.from(arrayBuffer); // Convert ArrayBuffer to Buffer
     }
 
+    const barcode = uuidv4(); // Replace with a custom barcode logic if needed
+
     // Construct the data object for Prisma
     const data = {
       name,
@@ -71,6 +74,7 @@ export async function POST(req: Request) {
       schoolId,
       ...(supplierId && { supplierId }),
       ...(imageBuffer && { image: imageBuffer }),
+      barcode
     };
 
     console.log("Final Payload for Prisma:", data);
@@ -113,6 +117,7 @@ export async function GET(req: Request) {
         stock: true,
         image: true,
         imageUrl: true, // Ensure imageUrl is included
+        barcode: true
       },
     });
 

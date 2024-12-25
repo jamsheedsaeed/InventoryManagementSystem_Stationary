@@ -9,14 +9,15 @@
     "start": "next start",
     "lint": "next lint",
     "build:ignore-types": "next build && tsc --noEmit"
-
   },
   "dependencies": {
     "@prisma/client": "^6.0.1",
+    "@zxing/library": "^0.21.3",
     "bcrypt": "^5.1.1",
     "busboy": "^1.6.0",
     "chart.js": "^4.4.7",
     "formidable": "^3.5.2",
+    "jsbarcode": "^3.11.6",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "next": "15.1.0",
@@ -24,10 +25,12 @@
     "nodemailer": "^6.9.16",
     "prisma": "^6.0.1",
     "react": "^19.0.0",
+    "react-barcode": "^1.5.3",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.4.0",
     "react-toastify": "^11.0.0",
+    "react-webcam": "^7.2.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
@@ -39,6 +42,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.0",
     "postcss": "^8",

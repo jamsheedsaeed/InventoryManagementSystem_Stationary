@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Uniform } from "@prisma/client";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Barcode from "react-barcode";
 
 export default function UniformList() {
   const [uniforms, setUniforms] = useState<Uniform[]>([]);
@@ -20,6 +21,35 @@ export default function UniformList() {
     } catch (error) {
       console.error("Error fetching uniforms:", error);
       toast.error("Error fetching uniforms");
+    }
+  };
+
+  // Print Barcode
+  const printBarcode = (barcode: string, name: string) => {
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      const htmlContent = `
+        <html>
+          <head>
+            <title>Print Barcode</title>
+          </head>
+          <body style="text-align: center; font-family: Arial, sans-serif;">
+            <h2>${name}</h2>
+            <div style="margin: 20px;">
+              <svg xmlns="http://www.w3.org/2000/svg" id="barcode-svg"></svg>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+            <script>
+              JsBarcode("#barcode-svg", "${barcode}", { format: "CODE128", displayValue: true, height: 50 });
+              window.print();
+              window.onafterprint = () => window.close();
+            </script>
+          </body>
+        </html>
+      `;
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
     }
   };
 
@@ -112,22 +142,33 @@ export default function UniformList() {
                 <strong>Stock:</strong> {uniform.stock}
               </p>
 
+              {/* Barcode */}
+              <div className="mt-4">
+                <h4 className="text-gray-600 mb-2">Barcode:</h4>
+                <Barcode value={uniform.barcode} height={50} />
+              </div>
+
               {/* Actions */}
               <div className="flex gap-2 mt-4">
-  <button
-    onClick={() => handleEdit(uniform)}
-    className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
-  >
-    Edit
-  </button>
-  <button
-    onClick={() => deleteUniform(uniform.id)}
-    className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition"
-  >
-    Delete
-  </button>
-</div>
-
+                <button
+                  onClick={() => handleEdit(uniform)}
+                  className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => deleteUniform(uniform.id)}
+                  className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => printBarcode(uniform.barcode, uniform.name)}
+                  className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition"
+                >
+                  Print Barcode
+                </button>
+              </div>
             </div>
           </div>
         ))}
