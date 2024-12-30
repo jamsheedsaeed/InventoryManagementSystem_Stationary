@@ -7,12 +7,14 @@ const prisma = new PrismaClient();
 export async function POST(req: Request) {
   try {
     const { uniformId, adjustment, reason } = await req.json();
-
+    // Validate input
     if (!uniformId || adjustment <= 0 || !reason) {
-      return NextResponse.json({ error: "Invalid input data." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid input data." },
+        { status: 400 }
+      );
     }
-
-    // Fetch the current uniform stock
+    // Fetch the uniform
     const uniform = await prisma.uniform.findUnique({
       where: { id: uniformId },
     });
@@ -28,11 +30,20 @@ export async function POST(req: Request) {
       data: { stock: updatedStock },
     });
 
-    // Check if stock is below threshold
-    if (updatedStock >= uniform.lowStockThreshold) {
+    // Log the stock adjustment
+    await prisma.stockAdjustment.create({
+      data: {
+        uniformId,
+        adjustment,
+        reason,
+      },
+    });
+
+    // Send low stock alert email if stock falls below the threshold
+    if (updatedStock < uniform.lowStockThreshold) {
       await sendEmail(
         "⚠️ Low Stock Alert",
-        `<p>The stock for <strong>${uniform.name}</strong> (Size: ${uniform.size}) has dropped to <strong>${updatedStock}</strong> units. The defined threshold is <strong>${uniform.lowStockThreshold}</strong>.</p>
+        `<p>The stock for <strong>${uniform.name}</strong> (Size: ${uniform.size}) is now <strong>${updatedStock}</strong> units. The defined threshold is <strong>${uniform.lowStockThreshold}</strong>.</p>
          <p>Please restock this item as soon as possible.</p>`
       );
     }

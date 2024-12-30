@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Uniform } from "@prisma/client";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,6 +10,7 @@ export default function UniformList() {
   const [uniforms, setUniforms] = useState<Uniform[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentUniform, setCurrentUniform] = useState<Uniform | null>(null);
+  const barcodeContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch uniforms from the API
   const fetchUniforms = async () => {
@@ -24,32 +25,30 @@ export default function UniformList() {
     }
   };
 
-  // Print Barcode
-  const printBarcode = (barcode: string, name: string) => {
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      const htmlContent = `
-        <html>
-          <head>
-            <title>Print Barcode</title>
-          </head>
-          <body style="text-align: center; font-family: Arial, sans-serif;">
-            <h2>${name}</h2>
-            <div style="margin: 20px;">
-              <svg xmlns="http://www.w3.org/2000/svg" id="barcode-svg"></svg>
-            </div>
-            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
-            <script>
-              JsBarcode("#barcode-svg", "${barcode}", { format: "CODE128", displayValue: true, height: 50 });
-              window.print();
-              window.onafterprint = () => window.close();
-            </script>
-          </body>
-        </html>
-      `;
-      printWindow.document.open();
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
+  // Print All Barcodes
+  const printAllBarcodes = () => {
+    if (barcodeContainerRef.current) {
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        const htmlContent = `
+          <html>
+            <head>
+              <title>Print All Barcodes</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+              <h2>All Barcodes</h2>
+              ${barcodeContainerRef.current.innerHTML}
+              <script>
+                window.print();
+                window.onafterprint = () => window.close();
+              </script>
+            </body>
+          </html>
+        `;
+        printWindow.document.open();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+      }
     }
   };
 
@@ -104,6 +103,17 @@ export default function UniformList() {
       <ToastContainer position="top-right" autoClose={3000} />
 
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Uniforms</h2>
+
+      {/* Print All Barcodes Button */}
+      <div className="flex justify-end mb-6">
+        <button
+          onClick={printAllBarcodes}
+          className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition"
+        >
+          Print All Barcodes
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {uniforms.map((uniform) => (
           <div
@@ -115,10 +125,10 @@ export default function UniformList() {
               <img
                 src={
                   typeof uniform.image === "string"
-                    ? uniform.image
+                    ? uniform.image // If the image is already a URL
                     : `data:image/jpeg;base64,${Buffer.from(uniform.image).toString(
                         "base64"
-                      )}`
+                      )}` // If the image is stored as binary
                 }
                 alt={uniform.name}
                 className="w-full h-48 object-cover"
@@ -136,7 +146,7 @@ export default function UniformList() {
                 <strong>Size:</strong> {uniform.size}
               </p>
               <p className="text-gray-600">
-                <strong>Price:</strong> ${uniform.price}
+                <strong>Price:</strong> PKR {uniform.costPrice}
               </p>
               <p className="text-gray-600">
                 <strong>Stock:</strong> {uniform.stock}
@@ -145,7 +155,7 @@ export default function UniformList() {
               {/* Barcode */}
               <div className="mt-4">
                 <h4 className="text-gray-600 mb-2">Barcode:</h4>
-                <Barcode value={uniform.barcode} height={50} />
+                <Barcode width={2} format="CODE128" value={uniform.barcode} height={50} />
               </div>
 
               {/* Actions */}
@@ -162,14 +172,18 @@ export default function UniformList() {
                 >
                   Delete
                 </button>
-                <button
-                  onClick={() => printBarcode(uniform.barcode, uniform.name)}
-                  className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition"
-                >
-                  Print Barcode
-                </button>
               </div>
             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Hidden Barcodes for Printing */}
+      <div className="hidden" ref={barcodeContainerRef}>
+        {uniforms.map((uniform) => (
+          <div key={uniform.id} className="mb-4 text-center">
+            <h4>{uniform.name}</h4>
+            <Barcode width={2} format="CODE128" value={uniform.barcode} height={50} />
           </div>
         ))}
       </div>

@@ -1,39 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Uniform, School } from "@prisma/client";
+import React, { useState, useEffect, useRef } from "react";
+import { Uniform } from "@prisma/client";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function SalesPage() {
-  const [schools, setSchools] = useState<School[]>([]);
-  const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(null);
   const [uniforms, setUniforms] = useState<Uniform[]>([]);
   const [cart, setCart] = useState<
-    { id: number; name: string; price: number; size: string; quantity: number }[]
+    {
+      id: number;
+      name: string;
+      costPrice: number;
+      price: number;
+      size: string;
+      quantity: number;
+    }[]
   >([]);
-  const [discount, setDiscount] = useState<number>(0); // Discount percentage
+  const [discount, setDiscount] = useState<number>(0);
+  const [scannedCode, setScannedCode] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch schools
-  const fetchSchools = async () => {
+  // ---------------------
+  // Fetch Uniforms
+  // ---------------------
+  const fetchUniforms = async () => {
     try {
-      const res = await fetch("/api/schools");
-      const data: School[] = await res.json();
-      setSchools(data);
-
-      if (data.length > 0) {
-        setSelectedSchoolId(data[0].id);
-        fetchUniforms(data[0].id);
-      }
-    } catch (error) {
-      toast.error("Error fetching schools.");
-    }
-  };
-
-  // Fetch uniforms
-  const fetchUniforms = async (schoolId: number) => {
-    try {
-      const res = await fetch(`/api/uniforms?schoolId=${schoolId}`);
+      const res = await fetch(`/api/uniforms`);
       const data: Uniform[] = await res.json();
       setUniforms(data);
     } catch (error) {
@@ -41,10 +34,33 @@ export default function SalesPage() {
     }
   };
 
-  // Add to Cart
+  // ---------------------
+  // Cart Persistence (Local Storage)
+  // ---------------------
+  useEffect(() => {
+    const savedCart = localStorage.getItem("salesCart");
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
+    const savedDiscount = localStorage.getItem("salesDiscount");
+    if (savedDiscount) {
+      setDiscount(parseFloat(savedDiscount));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("salesCart", JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem("salesDiscount", discount.toString());
+  }, [discount]);
+
+  // ---------------------
+  // Cart Logic
+  // ---------------------
   const addToCart = (uniform: Uniform) => {
     const existingItem = cart.find((item) => item.id === uniform.id);
-
     if (existingItem) {
       setCart(
         cart.map((item) =>
@@ -59,6 +75,7 @@ export default function SalesPage() {
         {
           id: uniform.id,
           name: uniform.name,
+          costPrice: uniform.costPrice,
           price: uniform.price,
           size: uniform.size,
           quantity: 1,
@@ -68,6 +85,33 @@ export default function SalesPage() {
     toast.success(`${uniform.name} added to cart!`);
   };
 
+  const removeFromCart = (itemId: number) => {
+    setCart(cart.filter((item) => item.id !== itemId));
+  };
+
+  const increaseQuantity = (itemId: number) => {
+    setCart(
+      cart.map((item) =>
+        item.id === itemId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  };
+
+  const decreaseQuantity = (itemId: number) => {
+    setCart(
+      cart.map((item) =>
+        item.id === itemId && item.quantity > 1
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      )
+    );
+  };
+
+  // ---------------------
+  // Sale Completion
+  // ---------------------
   const completeSale = async () => {
     if (cart.length === 0) {
       toast.warn("Cart is empty. Cannot complete sale.");
@@ -78,189 +122,198 @@ export default function SalesPage() {
       const res = await fetch("/api/uniforms");
       const stockData: Uniform[] = await res.json();
 
-      // Check for out-of-stock items
       const outOfStockItems = cart.filter((cartItem) => {
         const uniform = stockData.find((u) => u.id === cartItem.id);
         return uniform && uniform.stock < cartItem.quantity;
       });
 
       if (outOfStockItems.length > 0) {
-        const itemNames = outOfStockItems.map((item) => item.name).join(", ");
+        const itemNames = outOfStockItems.map((i) => i.name).join(", ");
         toast.error(`Out of stock: ${itemNames}`);
         return;
       }
 
-      // Send sale data
+      console.log(JSON.stringify(cart));
+
       const response = await fetch("/api/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          schoolId: selectedSchoolId,
-          cart,
-          discount,
-        }),
+        body: JSON.stringify({ cart, discount }),
       });
 
       if (!response.ok) throw new Error();
 
       toast.success("Sale completed successfully!");
       setCart([]);
-      fetchUniforms(selectedSchoolId!);
+      fetchUniforms();
     } catch (error) {
       toast.error("Failed to complete sale.");
     }
   };
 
+  // ---------------------
+  // Barcode Scanner Input
+  // ---------------------
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setScannedCode(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const barcode = scannedCode.trim();
+
+      if (barcode) {
+        const matchingUniform = uniforms.find((u) => u.barcode === barcode);
+        if (matchingUniform) {
+          addToCart(matchingUniform);
+        } else {
+          toast.error("Product not found in the system.");
+        }
+      }
+      setScannedCode("");
+    }
+  };
+
+  const calculateTotal = () =>
+    cart.reduce((total, item) => total + item.price * item.quantity, 0);
+
   useEffect(() => {
-    fetchSchools();
+    fetchUniforms();
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   }, []);
 
-  const handleSchoolChange = (schoolId: string) => {
-    const id = parseInt(schoolId);
-    setSelectedSchoolId(id);
-    fetchUniforms(id);
-  };
-
-  const calculateTotal = () => {
-    const total = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-    const discountAmount = (total * discount) / 100;
-    return total - discountAmount;
-  };
-
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* Main Content */}
-      <div className="flex-1 p-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-6">Sales Page</h1>
+      <header className="px-6 py-4 bg-white shadow-sm flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-800">Sales</h1>
+      </header>
 
-        {/* School Selection */}
-        <div className="mb-6">
-          <label className="block text-lg font-medium mb-2">Select School</label>
-          <select
-            value={selectedSchoolId || ""}
-            onChange={(e) => handleSchoolChange(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500"
-          >
-            {schools.map((school) => (
-              <option key={school.id} value={school.id}>
-                {school.name}
-              </option>
-            ))}
-          </select>
+      <main className="flex-1 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-base font-medium mb-1 text-gray-600">
+              Scan Barcode
+            </label>
+            <input
+              ref={inputRef}
+              type="text"
+              value={scannedCode}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              placeholder="Scan here..."
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1 text-gray-600">
+              Discount (%)
+            </label>
+            <input
+              type="number"
+              value={discount}
+              onChange={(e) => setDiscount(Number(e.target.value))}
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. 10"
+              min={0}
+              max={99}
+            />
+          </div>
         </div>
 
-        {/* Uniform Cards */}
-        {selectedSchoolId && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {uniforms.map((uniform) => (
-              <div
-                key={uniform.id}
-                className="flex flex-col bg-white rounded-lg shadow-md hover:shadow-lg transition p-4"
-              >
-                {uniform.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={
-                      typeof uniform.image === "string"
-                        ? uniform.image
-                        : `data:image/jpeg;base64,${Buffer.from(uniform.image).toString("base64")}`
-                    }
-                    alt={uniform.name}
-                    className="w-full h-48 object-cover rounded-md mb-4"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-gray-200 rounded-md flex items-center justify-center mb-4">
-                    <span className="text-gray-500">No Image Available</span>
-                  </div>
-                )}
-                <h3 className="text-lg font-bold">{uniform.name}</h3>
-                <p className="text-gray-600">Size: {uniform.size}</p>
-                <p className="text-gray-600 mb-4">Price: PKR <span className="font-bold">{uniform.price}</span></p>
-                <button
-                  onClick={() => addToCart(uniform)}
-                  className="mt-auto bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"
-                >
-                  Add to Cart
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Cart Sidebar */}
-      <div className="w-1/3 bg-white p-6 shadow-lg">
-        <h2 className="text-2xl font-bold mb-6">Cart</h2>
-        {cart.map((item) => (
-          <div key={item.id} className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="font-bold">{item.name}</h3>
-              <p>Size: {item.size}</p>
-              <div className="flex mt-2">
-                <input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    setCart(
-                      cart.map((cartItem) =>
-                        cartItem.id === item.id
-                          ? { ...cartItem, quantity: Math.max(parseInt(e.target.value), 1) }
-                          : cartItem
-                      )
-                    )
-                  }
-                  className="w-16 border rounded px-2 mr-2"
-                />
-                <input
-                  type="number"
-                  value={item.price}
-                  onChange={(e) =>
-                    setCart(
-                      cart.map((cartItem) =>
-                        cartItem.id === item.id
-                          ? { ...cartItem, price: Math.max(parseFloat(e.target.value), 0) }
-                          : cartItem
-                      )
-                    )
-                  }
-                  className="w-20 border rounded px-2"
-                />
-              </div>
-            </div>
-            <button
-              onClick={() => setCart(cart.filter((cartItem) => cartItem.id !== item.id))}
-              className="text-red-500 hover:underline"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-
-        {/* Discount Selection */}
-        <div className="mt-4">
-          <label className="block font-bold mb-2">Apply Discount</label>
-          <select
-            value={discount}
-            onChange={(e) => setDiscount(parseInt(e.target.value))}
-            className="w-full px-4 py-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value={0}>No Discount</option>
-            <option value={5}>5% Discount</option>
-            <option value={10}>10% Discount</option>
-            <option value={15}>15% Discount</option>
-          </select>
+        <div className="bg-white shadow overflow-hidden rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-600">
+                  #
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-600">
+                  Product Name
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-600">
+                  Size
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-600">
+                  Price
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-600">
+                  Qty
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-600">
+                  Subtotal
+                </th>
+                <th scope="col" className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {cart.map((item, index) => {
+                const subtotal = item.costPrice * item.quantity;
+                return (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-800 font-semibold">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-3">{item.name}</td>
+                    <td className="px-4 py-3">{item.size}</td>
+                    <td className="px-4 py-3">PKR {item.costPrice}</td>
+                    <td className="px-4 py-3 flex items-center space-x-2">
+                      <button
+                        onClick={() => decreaseQuantity(item.id)}
+                        className="px-2 py-1 border rounded text-gray-700 hover:bg-gray-200"
+                      >
+                        -
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        onClick={() => increaseQuantity(item.id)}
+                        className="px-2 py-1 border rounded text-gray-700 hover:bg-gray-200"
+                      >
+                        +
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 font-medium">
+                      PKR {subtotal}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-600 hover:text-red-800 text-sm underline"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {cart.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-4 text-center text-gray-500">
+                    No items in cart
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <div className="font-bold mt-6">Total: ${calculateTotal().toFixed(2)}</div>
-        <button
-          onClick={completeSale}
-          className="mt-4 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
-        >
-          Complete Sale
-        </button>
-      </div>
+        <div className="mt-6 flex justify-between items-center">
+          <div className="text-xl font-bold">
+            Total: PKR {calculateTotal().toFixed(2)}
+          </div>
+          <button
+            onClick={completeSale}
+            className="bg-green-600 text-white py-2 px-6 rounded-lg shadow hover:bg-green-700"
+          >
+            Complete Sale
+          </button>
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,334 +1,242 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { School } from "@prisma/client";
+import React, { useEffect, useState } from "react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+import { FaBoxes, FaMoneyBillWave, FaChartLine, FaDollarSign } from "react-icons/fa";
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+interface OverviewData {
+  totalStock: number;
+  totalSalesToday: number;
+  totalRevenueToday: number;
+  totalProfitToday: number;
+}
 
 interface LowStockItem {
   id: number;
   name: string;
-  size: string;
   stock: number;
   lowStockThreshold: number;
-  school: {
-    name: string;
-  };
 }
 
-export default function SchoolsPage() {
-  const [schools, setSchools] = useState<School[]>([]);
+interface SalesTrendsData {
+  dates: string[];
+  sales: number[];
+}
+
+interface TopSellingItem {
+  id: number;
+  name: string;
+  quantitySold: number;
+}
+
+export default function Dashboard() {
+  const [overview, setOverview] = useState<OverviewData | null>(null);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
-  const [form, setForm] = useState({
-    name: "",
-    address: "",
-    phone: "",
-    principal: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [salesTrends, setSalesTrends] = useState<SalesTrendsData | null>(null);
+  const [topSelling, setTopSelling] = useState<TopSellingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [activeTab, setActiveTab] = useState<"add" | "list">("add");
-  const [selectedSchool, setSelectedSchool] = useState<School | null>(null); // For delete confirmation popup
-  const [editingSchool, setEditingSchool] = useState<School | null>(null); // For edit form popup
-
-  // Fetch schools from the API
-  async function fetchSchools() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/schools");
-      if (!res.ok) throw new Error("Failed to fetch schools");
-      const data: School[] = await res.json();
-      setSchools(data);
-    } catch (error) {
-      console.error("Error fetching schools:", error);
-      setError("Unable to load schools. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Fetch low stock items
-  async function fetchLowStockItems() {
-    try {
-      const res = await fetch("/api/low-stock");
-      if (!res.ok) throw new Error("Failed to fetch low stock items");
-      const data: LowStockItem[] = await res.json();
-      setLowStockItems(data);
-    } catch (error) {
-      console.error("Error fetching low stock items:", error);
-    }
-  }
-
-  // Add a new school
-  async function addSchool() {
-    setError("");
-    setSuccess("");
-    if (!form.name || !form.address || !form.phone || !form.principal) {
-      setError("Please fill out all fields");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const res = await fetch("/api/schools", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error("Failed to add school");
-
-      setForm({ name: "", address: "", phone: "", principal: "" });
-      setSuccess("School added successfully!");
-      fetchSchools();
-    } catch (error) {
-      console.error("Error adding school:", error);
-      setError("Failed to add school. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  // Delete a school
-  async function deleteSchool(id: number) {
-    try {
-      const res = await fetch(`/api/schools/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete school");
-      setSelectedSchool(null); // Close the confirmation popup
-      fetchSchools();
-    } catch (error) {
-      console.error("Error deleting school:", error);
-      setError("Failed to delete school. Please try again.");
-    }
-  }
-
-  // Update a school
-  async function updateSchool() {
-    if (!editingSchool) return;
-
-    try {
-      const res = await fetch(`/api/schools/${editingSchool.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingSchool),
-      });
-      if (!res.ok) throw new Error("Failed to update school");
-      setEditingSchool(null); // Close the edit form popup
-      fetchSchools();
-    } catch (error) {
-      console.error("Error updating school:", error);
-      setError("Failed to update school. Please try again.");
-    }
-  }
 
   useEffect(() => {
-    fetchSchools();
-    fetchLowStockItems(); // Fetch low stock items
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [overviewRes, lowStockRes, salesTrendsRes, topSellingRes] =
+          await Promise.all([
+            fetch("/api/dashboard/overview"),
+            fetch("/api/dashboard/low-stock"),
+            fetch("/api/dashboard/sales-trends"),
+            fetch("/api/dashboard/top-selling"),
+          ]);
+
+        if (!overviewRes.ok) throw new Error("Failed to fetch overview data");
+        if (!lowStockRes.ok) throw new Error("Failed to fetch low-stock items");
+        if (!salesTrendsRes.ok)
+          throw new Error("Failed to fetch sales trends");
+        if (!topSellingRes.ok)
+          throw new Error("Failed to fetch top-selling items");
+
+        const overviewData: OverviewData = await overviewRes.json();
+        const lowStockData: LowStockItem[] = await lowStockRes.json();
+        const salesTrendsData: SalesTrendsData = await salesTrendsRes.json();
+        const topSellingData: TopSellingItem[] = await topSellingRes.json();
+
+        setOverview(overviewData);
+        setLowStockItems(lowStockData);
+        setSalesTrends(salesTrendsData);
+        setTopSelling(topSellingData);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError(
+          "Unable to load dashboard data. Please refresh or try again later."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-4xl font-bold text-gray-800 mb-6">Schools Management</h1>
-
-      {/* Tabs */}
-      <div className="flex mb-6 border-b border-gray-200">
-        <button
-          className={`px-4 py-2 text-lg font-medium ${
-            activeTab === "add"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-600"
-          }`}
-          onClick={() => setActiveTab("add")}
-        >
-          Add School
-        </button>
-        <button
-          className={`px-4 py-2 text-lg font-medium ${
-            activeTab === "list"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-600"
-          }`}
-          onClick={() => setActiveTab("list")}
-        >
-          List of Schools
-        </button>
+  if (loading) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-screen">
+        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+        <p className="text-gray-600">Loading...</p>
       </div>
+    );
+  }
 
-      {/* Low Stock Alerts */}
-      {lowStockItems.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-md mb-6 shadow-sm">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ Low Stock Alerts</h2>
-          <ul className="space-y-2">
-            {lowStockItems.map((item) => (
-              <li key={item.id} className="text-gray-700">
-                {item.name} (Size: {item.size}) - <strong>Stock: {item.stock}</strong> | School:{" "}
-                <strong>{item.school.name}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+  if (error) {
+    return (
+      <div className="p-8 bg-gray-100 min-h-screen">
+        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
 
-      {/* Tab Content */}
-      {activeTab === "add" && (
-        <>
-          {/* Add School Form */}
-          <div className="bg-white p-6 shadow-md rounded-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Add a New School</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {Object.keys(form).map((field) => (
-                <div key={field}>
-                  <label
-                    htmlFor={field}
-                    className="block text-gray-700 font-medium mb-2 capitalize"
-                  >
-                    {field}
-                  </label>
-                  <input
-                    type="text"
-                    id={field}
-                    value={form[field as keyof typeof form]}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        [field as keyof typeof form]: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    placeholder={`Enter ${field}`}
-                  />
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={addSchool}
-              disabled={isSubmitting}
-              className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
-            >
-              {isSubmitting ? "Adding..." : "Add School"}
-            </button>
-          </div>
-        </>
-      )}
+  return (
+    <div className="p-8 bg-gray-100 min-h-screen flex items-center justify-center">
+      <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-screen-xl">
+        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
-      {activeTab === "list" && (
-        <>
-          {/* Schools List */}
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">List of Schools</h2>
-          {loading ? (
-            <div className="text-center text-gray-500">Loading...</div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {schools.map((school) => (
-                <div
-                  key={school.id}
-                  className="bg-white p-6 rounded-md shadow-md hover:shadow-lg transition"
-                >
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">{school.name}</h3>
-                  <p className="text-gray-600 mb-1">
-                    <strong>Address:</strong> {school.address}
-                  </p>
-                  <p className="text-gray-600 mb-1">
-                    <strong>Phone:</strong> {school.phone}
-                  </p>
-                  <p className="text-gray-600 mb-4">
-                    <strong>Principal:</strong> {school.principal}
-                  </p>
-                  <div className="flex justify-between gap-4">
-                    <button
-                      onClick={() => setEditingSchool(school)}
-                      className="w-full bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600 transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => setSelectedSchool(school)}
-                      className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          {overview && (
+            <>
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105">
+                <FaBoxes className="text-4xl mb-4" />
+                <h2 className="text-lg font-semibold">Total Stock</h2>
+                <p className="text-3xl font-bold">{overview.totalStock}</p>
+              </div>
+              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105">
+                <FaMoneyBillWave className="text-4xl mb-4" />
+                <h2 className="text-lg font-semibold">Total Sales Today</h2>
+                <p className="text-3xl font-bold">{overview.totalSalesToday}</p>
+              </div>
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105">
+                <FaDollarSign className="text-4xl mb-4" />
+                <h2 className="text-lg font-semibold">Revenue Today</h2>
+                <p className="text-3xl font-bold">PKR {overview.totalRevenueToday}</p>
+              </div>
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105">
+                <FaChartLine className="text-4xl mb-4" />
+                <h2 className="text-lg font-semibold">Profit Today</h2>
+                <p className="text-3xl font-bold">PKR {overview.totalProfitToday}</p>
+              </div>
+            </>
           )}
-        </>
-      )}
+        </div>
 
-      {/* Edit School Popup */}
-      {editingSchool && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-            <h2 className="text-lg font-bold mb-4">Edit School</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {Object.keys(editingSchool).map(
-                (key) =>
-                  key !== "id" && ( // Skip editing the ID
-                    <div key={key}>
-                      <label className="block font-medium capitalize">{key}</label>
-                      <input
-                        type="text"
-                        value={editingSchool[key as keyof School] as string}
-                        onChange={(e) =>
-                          setEditingSchool({
-                            ...editingSchool,
-                            [key]: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                      />
-                    </div>
-                  )
-              )}
-            </div>
-            <div className="flex justify-end mt-4 gap-4">
-              <button
-                onClick={() => setEditingSchool(null)}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={updateSchool}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-              >
-                Save Changes
-              </button>
-            </div>
+        {/* Low-Stock Items */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-4">Low-Stock Items</h2>
+          <div className="bg-white shadow rounded overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 text-left text-gray-600 font-medium">
+                    Item
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600 font-medium">
+                    Stock
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600 font-medium">
+                    Threshold
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowStockItems.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-4 py-2">{item.name}</td>
+                    <td className="px-4 py-2">{item.stock}</td>
+                    <td className="px-4 py-2">{item.lowStockThreshold}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
 
-      {/* Confirmation Popup */}
-      {selectedSchool && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-            <h2 className="text-lg font-bold mb-4">Warning</h2>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to delete school <strong>{selectedSchool.name}</strong>? <br />
-              <span className="text-red-500 font-bold">
-                All records related to this school will be deleted permanently.
-              </span>
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setSelectedSchool(null)}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  deleteSchool(selectedSchool.id);
-                  setSelectedSchool(null);
-                }}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
+        {/* Sales Trends Chart */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-4">Sales Trends</h2>
+          {salesTrends && (
+            <Line
+              data={{
+                labels: salesTrends.dates,
+                datasets: [
+                  {
+                    label: "Sales",
+                    data: salesTrends.sales,
+                    borderColor: "rgba(75, 192, 192, 1)",
+                    backgroundColor: "rgba(75, 192, 192, 0.2)",
+                    tension: 0.1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: { position: "top" },
+                },
+              }}
+            />
+          )}
+        </div>
+
+        {/* Top-Selling Items */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Top-Selling Items</h2>
+          <div className="bg-white shadow rounded overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 text-left text-gray-600 font-medium">
+                    Item
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600 font-medium">
+                    Quantity Sold
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {topSelling.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-4 py-2">{item.name}</td>
+                    <td className="px-4 py-2">{item.quantitySold}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

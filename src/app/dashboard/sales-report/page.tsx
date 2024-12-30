@@ -39,6 +39,7 @@ export default function SalesReportPage() {
       }
       const res = await fetch(query);
       const data: Sale[] = await res.json();
+      console.log(data);
       setSales(data);
     } catch (error) {
       console.error("Error fetching sales report:", error);
@@ -150,8 +151,8 @@ export default function SalesReportPage() {
                   <th className="border px-4 py-2 text-left">Date</th>
                   <th className="border px-4 py-2 text-left">School</th>
                   <th className="border px-4 py-2 text-left">Items</th>
-                  <th className="border px-4 py-2 text-left">Total ($)</th>
-                  <th className="border px-4 py-2 text-left">Profit ($)</th>
+                  <th className="border px-4 py-2 text-left">Total (PKR)</th>
+                  <th className="border px-4 py-2 text-left">Profit (PKR)</th>
                   <th className="border px-4 py-2 text-left">Actions</th>
                 </tr>
               </thead>
@@ -167,8 +168,8 @@ export default function SalesReportPage() {
                         </div>
                       ))}
                     </td>
-                    <td className="border px-4 py-2">${sale.total.toFixed(2)}</td>
-                    <td className="border px-4 py-2">${sale.profit.toFixed(2)}</td>
+                    <td className="border px-4 py-2">{sale.total.toFixed(2)}</td>
+                    <td className="border px-4 py-2">{sale.profit.toFixed(2)}</td>
                     <td className="border px-4 py-2">
                       <button
                         className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"

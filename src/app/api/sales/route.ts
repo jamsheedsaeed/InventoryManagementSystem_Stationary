@@ -5,8 +5,8 @@ const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
-    const { schoolId, cart } = await req.json();
-
+    const {  cart } = await req.json();
+    const schoolId = 1;
     if (!cart || cart.length === 0) {
       return NextResponse.json(
         { error: "Cart is empty. Cannot complete sale." },
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
         const itemTotal = item.price * item.quantity;
         const itemProfit =
-          (item.price - (uniform.costPrice || 0)) * item.quantity;
+          ((uniform.costPrice || 0) - item.price) * item.quantity;
 
         total += itemTotal;
         profit += itemProfit;

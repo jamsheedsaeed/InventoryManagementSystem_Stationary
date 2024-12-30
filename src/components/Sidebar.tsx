@@ -2,26 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import {
   FiHome,
   FiShoppingCart,
   FiBook,
-  FiBarChart2,
   FiBox,
-  FiSettings,
   FiMenu,
   FiX,
 } from "react-icons/fi";
-import { MdAnalytics, MdReport, MdPeople, MdInventory } from "react-icons/md";
-import { FaChalkboardTeacher, FaIndustry } from "react-icons/fa";
+import { FaSchool } from "react-icons/fa";
+import { MdAnalytics, MdReport, MdInventory } from "react-icons/md";
+import { FaIndustry } from "react-icons/fa";
 
-export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+interface SidebarProps {
+  isOpen: boolean;
+  toggleSidebar: () => void;
+}
+
+export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const pathname = usePathname(); // Get the current path
 
   const menuItems = [
     { name: "Dashboard", href: "/dashboard", icon: <FiHome /> },
+    { name: "School Management", href: "/dashboard/School", icon: <FaSchool /> },
     { name: "Sales", href: "/dashboard/sales", icon: <FiShoppingCart /> },
     { name: "Uniforms", href: "/dashboard/uniforms", icon: <FiBook /> },
     { name: "Sales Report", href: "/dashboard/sales-report", icon: <MdReport /> },
@@ -35,7 +38,7 @@ export default function Sidebar() {
     <div
       className={`${
         isOpen ? "w-64" : "w-16"
-      } h-screen bg-gray-900 text-gray-200 flex flex-col justify-between fixed transition-all duration-300`}
+      } h-screen bg-[#111c44] text-gray-200 flex flex-col justify-between fixed transition-all duration-300`}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4">
@@ -43,7 +46,7 @@ export default function Sidebar() {
           IMS
         </span>
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleSidebar}
           className="text-gray-200 focus:outline-none"
         >
           {isOpen ? <FiX size={20} /> : <FiMenu size={20} />}
@@ -87,7 +90,7 @@ export default function Sidebar() {
             isOpen ? "block" : "hidden"
           } transition-all duration-300`}
         >
-          © 2024 My App
+          © 2024 POS
         </span>
       </div>
     </div>

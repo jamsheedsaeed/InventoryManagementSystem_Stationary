@@ -21,6 +21,7 @@ export default function AddUniform({ onUniformAdded }: AddUniformProps) {
     name: "",
     size: "",
     price: "",
+    costPrice: "", // Added field for Cost Price
     stock: "",
     schoolId: "",
     supplierId: "",
@@ -56,7 +57,14 @@ export default function AddUniform({ onUniformAdded }: AddUniformProps) {
 
   // Handle form submission
   const handleSubmit = async () => {
-    if (!form.name || !form.size || !form.price || !form.stock || !form.schoolId) {
+    if (
+      !form.name ||
+      !form.size ||
+      !form.price ||
+      !form.costPrice ||
+      !form.stock ||
+      !form.schoolId
+    ) {
       alert("Please fill in all required fields.");
       return;
     }
@@ -65,25 +73,12 @@ export default function AddUniform({ onUniformAdded }: AddUniformProps) {
     formData.append("name", form.name);
     formData.append("size", form.size);
     formData.append("price", form.price);
+    formData.append("costPrice", form.costPrice); // Add Cost Price
     formData.append("stock", form.stock);
     formData.append("schoolId", form.schoolId);
     if (form.supplierId) formData.append("supplierId", form.supplierId);
     if (image) formData.append("image", image);
 
-//     const formData = new FormData();
-// formData.append("name", "School Uniform");
-// formData.append("size", "M");
-// formData.append("price", "25.5");
-// formData.append("stock", "10");
-// formData.append("schoolId", "1");
-// formData.append("supplierId", "1");
-// if (image) { // Check that image is not null
-//   console.log("Image to upload:", image); // Log the image file
-
-//   formData.append("image", image);
-// } else {
-//   console.warn("No image selected for upload");
-// }
     try {
       const res = await fetch("/api/uniforms", {
         method: "POST",
@@ -93,7 +88,15 @@ export default function AddUniform({ onUniformAdded }: AddUniformProps) {
       if (!res.ok) throw new Error("Failed to add uniform");
 
       alert("Uniform added successfully!");
-      setForm({ name: "", size: "", price: "", stock: "", schoolId: "", supplierId: "" });
+      setForm({
+        name: "",
+        size: "",
+        price: "",
+        costPrice: "",
+        stock: "",
+        schoolId: "",
+        supplierId: "",
+      });
       setImage(null);
       onUniformAdded();
     } catch (error) {
@@ -112,15 +115,13 @@ export default function AddUniform({ onUniformAdded }: AddUniformProps) {
       <h2 className="text-2xl font-bold mb-4">Add a New Uniform</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Input Fields */}
-        {["name", "size", "price", "stock"].map((field) => (
+        {["name", "size", "price", "costPrice", "stock"].map((field) => (
           <div key={field}>
             <label className="block mb-1 capitalize">{field}</label>
             <input
-              type={field === "price" || field === "stock" ? "number" : "text"}
+              type={field === "price" || field === "stock" || field === "costPrice" ? "number" : "text"}
               value={form[field as keyof typeof form]}
-              onChange={(e) =>
-                setForm({ ...form, [field]: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, [field]: e.target.value })}
               className="w-full border p-2 rounded"
               placeholder={`Enter ${field}`}
             />

@@ -33,58 +33,41 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
 
-    // Extract form fields
-    const name = formData.get("name")?.toString();
-    const size = formData.get("size")?.toString();
+    const name = formData.get("name")?.toString() || ""; // Default to an empty string if undefined
+    const size = formData.get("size")?.toString() || "";
     const price = parseFloat(formData.get("price")?.toString() || "0");
-    const costPrice = parseFloat(formData.get("costPrice")?.toString() || "0");
+    const costPrice = parseFloat(formData.get("costPrice")?.toString() || "0"); // Add costPrice
     const stock = parseInt(formData.get("stock")?.toString() || "0");
     const schoolId = parseInt(formData.get("schoolId")?.toString() || "0");
     const supplierId = formData.get("supplierId")
       ? parseInt(formData.get("supplierId")?.toString() || "0")
       : null;
 
-    console.log("Received Fields:", { name, size, price, stock, schoolId, supplierId });
-
-    if (!name || !size || !price || !stock || !schoolId) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    // Extract and process the image
     let imageBuffer = null;
     const imageFile = formData.get("image") as File | null;
 
     if (imageFile) {
       const arrayBuffer = await imageFile.arrayBuffer();
-      imageBuffer = Buffer.from(arrayBuffer); // Convert ArrayBuffer to Buffer
+      imageBuffer = Buffer.from(arrayBuffer);
     }
 
-    const barcode = uuidv4(); // Replace with a custom barcode logic if needed
+    const barcode = Math.floor(100 + Math.random() * 900).toString();
 
-    // Construct the data object for Prisma
     const data = {
       name,
       size,
       price,
-      costPrice,
+      costPrice, // Include costPrice
       stock,
       schoolId,
       ...(supplierId && { supplierId }),
       ...(imageBuffer && { image: imageBuffer }),
-      barcode
+      barcode,
     };
 
-    console.log("Final Payload for Prisma:", data);
-
-    // Save uniform to the database
     const newUniform = await prisma.uniform.create({
       data,
     });
-
-    console.log("New Uniform Added:", newUniform);
 
     return NextResponse.json(newUniform, { status: 201 });
   } catch (error) {
@@ -114,6 +97,7 @@ export async function GET(req: Request) {
         name: true,
         size: true,
         price: true,
+        costPrice:true,
         stock: true,
         image: true,
         imageUrl: true, // Ensure imageUrl is included
