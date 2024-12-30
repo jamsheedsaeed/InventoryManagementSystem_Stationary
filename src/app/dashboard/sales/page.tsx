@@ -174,8 +174,22 @@ export default function SalesPage() {
     }
   };
 
-  const calculateTotal = () =>
-    cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const calculateTotal = () => {
+    // Calculate the subtotal first
+    const subTotal = cart.reduce((total, item) => {
+      // If you actually want to use costPrice for final calculation:
+      return total + item.costPrice * item.quantity;
+    }, 0);
+  
+    // Calculate the discount amount
+    const discountAmount = (subTotal * discount) / 100; 
+  
+    // Apply the discount
+    const totalAfterDiscount = subTotal - discountAmount;
+  
+    return totalAfterDiscount;
+  };
+  
 
   useEffect(() => {
     fetchUniforms();
