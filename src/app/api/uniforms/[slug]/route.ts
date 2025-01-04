@@ -17,9 +17,9 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { name, size, price, stock } = body;
-
-    if (!name || !size || price == null || stock == null) {
+    const { name, size, costPrice, stock } = body;
+    console.log(body);
+    if (!name || !size || costPrice == null || stock == null) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -31,7 +31,7 @@ export async function PUT(
       data: {
         name,
         size,
-        price: parseFloat(price),
+        costPrice: parseFloat(costPrice),
         stock: parseInt(stock),
       },
     });

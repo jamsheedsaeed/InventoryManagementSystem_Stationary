@@ -18,6 +18,7 @@ export default function UniformList() {
       const res = await fetch("/api/uniforms");
       if (!res.ok) throw new Error("Failed to fetch uniforms");
       const data: Uniform[] = await res.json();
+      console.log(data);
       setUniforms(data);
     } catch (error) {
       console.error("Error fetching uniforms:", error);
@@ -217,14 +218,14 @@ export default function UniformList() {
                 />
               </div>
               <div>
-                <label className="block font-medium mb-1">Price</label>
+                <label className="block font-medium mb-1">Cost Price</label>
                 <input
                   type="number"
-                  value={currentUniform.price}
+                  value={currentUniform.costPrice}
                   onChange={(e) =>
                     setCurrentUniform({
                       ...currentUniform,
-                      price: parseFloat(e.target.value),
+                      costPrice: parseFloat(e.target.value),
                     })
                   }
                   className="w-full border rounded px-4 py-2 focus:ring-2 focus:ring-blue-500"
