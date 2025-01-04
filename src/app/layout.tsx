@@ -1,10 +1,10 @@
 "use client";
-
 import { useState } from "react";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import SessionProviderWrapper from "@/components/SessionProviderWrapper";
+import { SessionProvider } from "next-auth/react";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -12,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="antialiased bg-gray-100">
+      <SessionProvider>
         <div className="flex">
           {/* Sidebar */}
           <Sidebar
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </div>
+        </SessionProvider>
       </body>
     </html>
   );

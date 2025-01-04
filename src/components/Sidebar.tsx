@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   FiHome,
   FiShoppingCart,
@@ -21,17 +22,49 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const pathname = usePathname(); // Get the current path
+  const { data: session } = useSession(); // Get the user session
 
+  // Define the menu items with admin-only restrictions
   const menuItems = [
-    { name: "Dashboard", href: "/dashboard", icon: <FiHome /> },
-    { name: "School Management", href: "/dashboard/School", icon: <FaSchool /> },
-    { name: "Sales", href: "/dashboard/sales", icon: <FiShoppingCart /> },
-    { name: "Uniforms", href: "/dashboard/uniforms", icon: <FiBook /> },
-    { name: "Sales Report", href: "/dashboard/sales-report", icon: <MdReport /> },
-    { name: "Stock Details", href: "/dashboard/low-stock", icon: <MdInventory /> },
-    { name: "Stock Adjustments", href: "/dashboard/stock-adjustments", icon: <FiBox /> },
-    { name: "Sales Analytics", href: "/dashboard/sales-analytics", icon: <MdAnalytics /> },
-    { name: "Suppliers", href: "/dashboard/suppliers", icon: <FaIndustry /> },
+    { name: "Dashboard", href: "/dashboard", icon: <FiHome />, adminOnly: true },
+    {
+      name: "School Management",
+      href: "/dashboard/School",
+      icon: <FaSchool />,
+      adminOnly: true,
+    },
+    { name: "Sales", href: "/dashboard/sales", icon: <FiShoppingCart />, adminOnly: false },
+    { name: "Uniforms", href: "/dashboard/uniforms", icon: <FiBook />, adminOnly: true },
+    {
+      name: "Sales Report",
+      href: "/dashboard/sales-report",
+      icon: <MdReport />,
+      adminOnly: true,
+    },
+    {
+      name: "Stock Details",
+      href: "/dashboard/low-stock",
+      icon: <MdInventory />,
+      adminOnly: true,
+    },
+    {
+      name: "Stock Adjustments",
+      href: "/dashboard/stock-adjustments",
+      icon: <FiBox />,
+      adminOnly: true,
+    },
+    {
+      name: "Sales Analytics",
+      href: "/dashboard/sales-analytics",
+      icon: <MdAnalytics />,
+      adminOnly: true,
+    },
+    {
+      name: "Suppliers",
+      href: "/dashboard/suppliers",
+      icon: <FaIndustry />,
+      adminOnly: true,
+    },
   ];
 
   return (
@@ -56,30 +89,35 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       {/* Menu */}
       <nav className="flex-1">
         <ul className="space-y-2">
-          {menuItems.map((item) => (
-            <li
-              key={item.name}
-              className={`group ${
-                pathname === item.href
-                  ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-800"
-              }`}
-            >
-              <Link
-                href={item.href}
-                className="flex items-center p-4 gap-4 rounded-md transition-all duration-200"
+          {menuItems.map((item) => {
+            // Check if the item is admin-only and the user is not an admin
+            const isDisabled = item.adminOnly && session?.user.role !== "admin";
+
+            return (
+              <li
+                key={item.name}
+                className={`group ${
+                  pathname === item.href
+                    ? "bg-blue-600 text-white"
+                    : "hover:bg-gray-800"
+                } ${isDisabled ? "pointer-events-none opacity-50" : ""}`} // Disable the tab if the user is not an admin
               >
-                <span className="text-lg">{item.icon}</span>
-                <span
-                  className={`${
-                    isOpen ? "block" : "hidden"
-                  } transition-all duration-300`}
+                <Link
+                  href={isDisabled ? "#" : item.href} // Prevent navigation for disabled tabs
+                  className="flex items-center p-4 gap-4 rounded-md transition-all duration-200"
                 >
-                  {item.name}
-                </span>
-              </Link>
-            </li>
-          ))}
+                  <span className="text-lg">{item.icon}</span>
+                  <span
+                    className={`${
+                      isOpen ? "block" : "hidden"
+                    } transition-all duration-300`}
+                  >
+                    {item.name}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

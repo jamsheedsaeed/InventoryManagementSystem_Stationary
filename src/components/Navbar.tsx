@@ -1,8 +1,11 @@
 "use client";
 
-import { FiBell, FiUser } from "react-icons/fi";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { FiBell, FiUser, FiLogOut, FiLogIn } from "react-icons/fi";
 
 export default function Navbar({ isSidebarOpen }: { isSidebarOpen: boolean }) {
+  const { data: session } = useSession(); // Get the user's session data
+
   return (
     <div
       className={`fixed top-0 ${
@@ -22,6 +25,25 @@ export default function Navbar({ isSidebarOpen }: { isSidebarOpen: boolean }) {
         <button className="text-gray-300 hover:text-white focus:outline-none">
           <FiUser size={20} />
         </button>
+
+        {/* Log In / Log Out Button */}
+        {session ? (
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })} // Redirect to the home page after logging out
+            className="text-gray-300 hover:text-white focus:outline-none flex items-center"
+          >
+            <FiLogOut size={20} />
+            <span className="hidden md:inline-block ml-2">Logout</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => signIn()} // Trigger login process
+            className="text-gray-300 hover:text-white focus:outline-none flex items-center"
+          >
+            <FiLogIn size={20} />
+            <span className="hidden md:inline-block ml-2">Login</span>
+          </button>
+        )}
       </div>
     </div>
   );

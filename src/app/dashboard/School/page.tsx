@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { School } from "@prisma/client";
+import { useSession } from "next-auth/react";
 
 interface LowStockItem {
   id: number;
@@ -30,7 +31,9 @@ export default function SchoolsPage() {
   const [activeTab, setActiveTab] = useState<"add" | "list">("add");
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null); // For delete confirmation popup
   const [editingSchool, setEditingSchool] = useState<School | null>(null); // For edit form popup
+  const { data: session, status } = useSession();
 
+  console.log(session);
   // Fetch schools from the API
   async function fetchSchools() {
     setLoading(true);
