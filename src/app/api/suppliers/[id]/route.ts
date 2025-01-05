@@ -3,9 +3,10 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request,
+    { params }: { params: Promise<{ id: string }> }) {
     try {
-      const id = parseInt(params.id);
+      const id =  parseInt((await params).id); 
       const { name, email, phone, leadTime } = await req.json();
   
       const updatedSupplier = await prisma.supplier.update({
@@ -21,10 +22,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 
   
-  export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  export async function DELETE(req: Request,
+    { params }: { params: Promise<{ id: string }> }) {
     try {
-      const id = parseInt(params.id);
-  
+        const id =  parseInt((await params).id);   
       await prisma.supplier.delete({
         where: { id },
       });
