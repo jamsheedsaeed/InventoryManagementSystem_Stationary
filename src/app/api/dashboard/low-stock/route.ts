@@ -14,7 +14,6 @@ export async function GET() {
         lowStockThreshold: true,
       },
     });
-
     // Filter low-stock items manually
     const lowStockItems = uniforms.filter(
       (uniform) => uniform.stock < uniform.lowStockThreshold

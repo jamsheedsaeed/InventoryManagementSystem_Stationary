@@ -10,6 +10,7 @@ export default function UniformList() {
   const [uniforms, setUniforms] = useState<Uniform[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentUniform, setCurrentUniform] = useState<Uniform | null>(null);
+  const [searchTerm, setSearchTerm] = useState(""); // New state for search term
   const barcodeContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch uniforms from the API
@@ -99,14 +100,26 @@ export default function UniformList() {
     fetchUniforms();
   }, []);
 
+  // Filter uniforms based on search term
+  const filteredUniforms = uniforms.filter((uniform) =>
+    uniform.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <ToastContainer position="top-right" autoClose={3000} />
 
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Uniforms</h2>
 
-      {/* Print All Barcodes Button */}
-      <div className="flex justify-end mb-6">
+      {/* Search and Print Buttons */}
+      <div className="flex justify-end mb-6 space-x-4">
+        <input
+          type="text"
+          placeholder="Search by name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border rounded px-4 py-2 focus:ring-2 focus:ring-blue-500"
+        />
         <button
           onClick={printAllBarcodes}
           className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition"
@@ -116,7 +129,7 @@ export default function UniformList() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {uniforms.map((uniform) => (
+        {filteredUniforms.map((uniform) => (
           <div
             key={uniform.id}
             className="bg-white shadow-md rounded-lg overflow-hidden transition transform hover:scale-105"
@@ -181,7 +194,7 @@ export default function UniformList() {
 
       {/* Hidden Barcodes for Printing */}
       <div className="hidden" ref={barcodeContainerRef}>
-        {uniforms.map((uniform) => (
+        {filteredUniforms.map((uniform) => (
           <div key={uniform.id} className="mb-4 text-center">
             <h4>{uniform.name}</h4>
             <Barcode width={2} format="CODE128" value={uniform.barcode} height={50} />
