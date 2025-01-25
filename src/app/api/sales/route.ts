@@ -5,8 +5,10 @@ const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
-    const {  cart } = await req.json();
-    const schoolId = 1;
+    const { cart, discount } = await req.json(); // Include discount
+    console.log('Received cart:', cart);
+    console.log('Discount:', discount);
+
     if (!cart || cart.length === 0) {
       return NextResponse.json(
         { error: "Cart is empty. Cannot complete sale." },
@@ -14,7 +16,27 @@ export async function POST(req: Request) {
       );
     }
 
-    // Calculate total and profit
+    // Extract schoolId from the first item
+    const firstItem = cart[0];
+    const schoolId = firstItem.schoolId;
+
+    if (typeof schoolId !== 'number') {
+      throw new Error("Invalid or missing schoolId in cart items.");
+    }
+
+    // // Verify that all items belong to the same school
+    // const uniqueSchoolIds = new Set(cart.map(item => item.schoolId));
+    // if (uniqueSchoolIds.size > 1) {
+    //   throw new Error("All items in the cart must belong to the same school.");
+    // }
+
+    // Verify that the school exists
+    const school = await prisma.school.findUnique({ where: { id: schoolId } });
+    if (!school) {
+      throw new Error(`School with ID ${schoolId} does not exist.`);
+    }
+
+    // Initialize total and profit
     let total = 0;
     let profit = 0;
 
@@ -25,11 +47,22 @@ export async function POST(req: Request) {
           where: { id: item.id },
         });
 
-        if (!uniform || uniform.stock < item.quantity) {
+        if (!uniform) {
+          throw new Error(`Uniform with ID ${item.id} does not exist.`);
+        }
+
+        if (uniform.stock < item.quantity) {
           throw new Error(
-            `Insufficient stock for uniform: ${item.name}. Available: ${uniform?.stock}`
+            `Insufficient stock for uniform: ${item.name}. Available: ${uniform.stock}`
           );
         }
+
+        // if (uniform.schoolId !== schoolId) {
+        //   throw new Error(
+        //     `Uniform: ${item.name} does not belong to the specified school.`
+        //   );
+        // }
+
         // Update stock
         await prisma.uniform.update({
           where: { id: item.id },
@@ -38,7 +71,7 @@ export async function POST(req: Request) {
 
         const itemTotal = item.price * item.quantity;
         const itemProfit =
-          ((uniform.costPrice || 0) - item.price) * item.quantity;
+          (item.price - (uniform.costPrice || 0)) * item.quantity; // Corrected profit calculation
 
         total += itemTotal;
         profit += itemProfit;
@@ -51,7 +84,9 @@ export async function POST(req: Request) {
       })
     );
 
-    // Create Sale
+    console.log("Proceeding to create sale...");
+
+    // Create Sale with discount
     const sale = await prisma.sale.create({
       data: {
         schoolId,
@@ -63,15 +98,24 @@ export async function POST(req: Request) {
       },
     });
 
+    console.log('Sale created successfully:', sale);
+
     return NextResponse.json({ message: "Sale completed successfully!", sale });
-  } catch (error) {
+  } catch (error: any) { // Specify error type
     console.error("Error completing sale:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
+    // Ensure that NextResponse.json is called with valid arguments
     return NextResponse.json(
-      { error: "Failed to complete sale. Please try again." },
+      { error: error.message || "Failed to complete sale. Please try again." },
       { status: 500 }
     );
   }
 }
+
 
 // GET: Fetch sales data
 export async function GET(req: Request) {

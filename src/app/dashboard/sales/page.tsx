@@ -8,15 +8,17 @@ import "react-toastify/dist/ReactToastify.css";
 export default function SalesPage() {
   const [uniforms, setUniforms] = useState<Uniform[]>([]);
   const [cart, setCart] = useState<
-    {
-      id: number;
-      name: string;
-      costPrice: number;
-      price: number;
-      size: string;
-      quantity: number;
-    }[]
-  >([]);
+  {
+    id: number;
+    name: string;
+    costPrice: number;
+    price: number;
+    size: string;
+    quantity: number;
+    schoolId: number; // Add this line
+  }[]
+>([]);
+
   const [discount, setDiscount] = useState<number>(0);
   const [scannedCode, setScannedCode] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -27,6 +29,7 @@ export default function SalesPage() {
   const fetchUniforms = async () => {
     try {
       const res = await fetch(`/api/uniforms`);
+      console.log(res);
       const data: Uniform[] = await res.json();
       setUniforms(data);
     } catch (error) {
@@ -61,6 +64,7 @@ export default function SalesPage() {
   // ---------------------
   const addToCart = (uniform: Uniform) => {
     const existingItem = cart.find((item) => item.id === uniform.id);
+    console.log(existingItem);
     if (existingItem) {
       setCart(
         cart.map((item) =>
@@ -79,6 +83,7 @@ export default function SalesPage() {
           price: uniform.price,
           size: uniform.size,
           quantity: 1,
+          schoolId: uniform.schoolId,
         },
       ]);
     }

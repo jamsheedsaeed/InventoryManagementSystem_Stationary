@@ -98,6 +98,7 @@ export async function GET(req: Request) {
         size: true,
         price: true,
         costPrice:true,
+        schoolId:true,
         stock: true,
         image: true,
         imageUrl: true, // Ensure imageUrl is included
